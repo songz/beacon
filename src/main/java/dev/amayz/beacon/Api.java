@@ -33,6 +33,7 @@ final class Api {
     static void routes(Javalin app, Store store) {
         app.post("/api/schedules/{shareId}", ctx -> publish(ctx, store));
         app.get("/api/schedules/{shareId}/current", ctx -> current(ctx, store));
+        app.before("/api/reports", ctx -> { if (ctx.method() == io.javalin.http.HandlerType.POST) RateLimit.check(ctx); });
         app.post("/api/reports", ctx -> report(ctx, store));
         app.get("/api/reports", ctx -> fetch(ctx, store));
         app.get("/api/whereami", Api::whereami);
@@ -96,7 +97,8 @@ final class Api {
             throw new BadRequestResponse("ciphertext must be " + MIN_CIPHERTEXT + ".." + MAX_CIPHERTEXT + " bytes");
         }
         store.putReport(decode(keyHash, "keyHash"), ciphertext);
-        System.out.printf("[Report] keyHash=%s bytes=%d ip=%s%n", keyHash.substring(0, 8), ciphertext.length, clientIp(ctx));
+        System.out.printf("[Report] keyHash=%s bytes=%d finder=%s ip=%s%n", keyHash.substring(0, 8), ciphertext.length,
+                RateLimit.finderId(ctx).substring(0, 8), clientIp(ctx));
         ctx.status(201).json(Map.of("stored", true, "bytes", ciphertext.length));
     }
 

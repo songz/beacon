@@ -37,7 +37,10 @@ public final class Main {
         )));
 
         // The finder page is one static file behind any share id; the id is read from the URL in the browser.
-        app.get("/f/{shareId}", ctx -> ctx.contentType("text/html").result(Static.finderPage()));
+        app.get("/f/{shareId}", ctx -> {
+            RateLimit.finderId(ctx); // mint the finder cookie with the page, so the first report already has one
+            ctx.contentType("text/html").result(Static.finderPage());
+        });
 
         Api.routes(app, new CassandraStore());
 
