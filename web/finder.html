@@ -22,12 +22,27 @@
   <main>
     <section class="card">
       <h2>You found something</h2>
-      <p class="lede">Item <code id="share-id"></code></p>
+      <p class="lede">Item <code id="share-id"></code>. Tell its owner where it is. Only the owner can read what you send.</p>
+      <p><button id="report" disabled>Report a sighting</button></p>
       <p class="status" id="finder-status">checking the share id</p>
+      <details id="proof">
+        <summary>what this tab sent</summary>
+        <p class="status">plaintext, never left this tab:</p>
+        <pre class="bytes" id="plaintext"></pre>
+        <p class="status">bytes posted to the server (ephemeral public key + nonce + AES-GCM ciphertext):</p>
+        <pre class="bytes" id="ciphertext"></pre>
+      </details>
+    </section>
+    <section class="card">
+      <h2>How this works</h2>
+      <p class="status">The item's owner published one P-256 public key per 15-minute epoch. This is epoch <code id="epoch"></code> and its key is</p>
+      <pre class="bytes" id="pubkey"></pre>
+      <p class="status">Your browser makes a throwaway key pair, does ECDH with that key, derives an AES-256-GCM key with HKDF, and encrypts your location. The server indexes the result by SHA-256 of the public key and stores the bytes for 7 days.</p>
     </section>
   </main>
   <footer><main>Source: <a href="https://github.com/songz/beacon">github.com/songz/beacon</a></main></footer>
   <script src="/common.js"></script>
+  <script src="/crypto.js"></script>
   <script src="/finder.js"></script>
 </body>
 </html>

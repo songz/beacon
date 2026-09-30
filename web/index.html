@@ -21,24 +21,33 @@
   <main>
     <section class="card">
       <h2>Your lost item</h2>
-      <p class="lede">This browser holds the item's secret seed. The server only knows the share id below.</p>
+      <p class="lede">This browser holds the item's secret seed. The server only ever sees the share id, one public key per 15 minutes, and ciphertext.</p>
       <p>Share id: <code id="share-id">minting</code></p>
       <p>Finder link, give this to anyone or print the QR:</p>
       <div class="row">
         <input type="text" id="finder-link" readonly>
         <button id="copy" class="secondary">Copy link</button>
       </div>
+      <p class="status" id="copy-status"></p>
       <div class="qr" id="qr"></div>
       <p class="status" id="share-status"></p>
     </section>
     <section class="card">
       <h2>Sightings</h2>
-      <p class="lede">Reports from finders show up here once the next commit lands the crypto.</p>
+      <p class="lede">Finders encrypt their location to this epoch's public key. This tab derives the matching private key from the seed and decrypts. Polls every 5 seconds.</p>
+      <ul class="sightings" id="sightings"></ul>
+      <p class="status" id="poll-status"></p>
+    </section>
+    <section class="card">
+      <h2>Reset</h2>
+      <p class="lede">Deletes the seed from this browser. Old ciphertexts on the server become permanently unreadable, which is the point.</p>
+      <button id="forget" class="secondary">Forget this item</button>
     </section>
   </main>
   <footer><main>Source and the story behind each commit: <a href="https://github.com/songz/beacon">github.com/songz/beacon</a></main></footer>
   <script src="/vendor/qrcode.js"></script>
   <script src="/common.js"></script>
+  <script src="/crypto.js"></script>
   <script src="/owner.js"></script>
 </body>
 </html>

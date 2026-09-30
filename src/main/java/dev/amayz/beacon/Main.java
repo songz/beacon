@@ -31,13 +31,14 @@ public final class Main {
         app.get("/health", ctx -> ctx.json(Map.of(
                 "ok", true,
                 "replica", replica,
+                "epoch", Epochs.current(),
                 "uptimeSeconds", java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime() / 1000
         )));
 
         // The finder page is one static file behind any share id; the id is read from the URL in the browser.
         app.get("/f/{shareId}", ctx -> ctx.contentType("text/html").result(Static.finderPage()));
 
-        Shares.routes(app);
+        Api.routes(app, new MemoryStore());
 
         app.start("0.0.0.0", port);
         System.out.printf("[Main] replica=%s listening on :%d%n", replica, port);
