@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>beacon: lose something, let strangers find it</title>
+  <link rel="stylesheet" href="/app.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
+    <meta name="theme-color" content="#0b6e4f" />
+    <meta name="apple-mobile-web-app-title" content="beacon" />
+    <meta name="mobile-web-app-capable" content="yes" />
+  </head>
+<body>
+  <header class="top">
+    <h1><a href="/">beacon</a></h1>
+    <span class="replica" id="replica">connecting</span>
+  </header>
+  <main>
+    <section class="card">
+      <h2>Your lost item</h2>
+      <p class="lede">This browser holds the item's secret seed. The server only knows the share id below.</p>
+      <p>Share id: <code id="share-id">minting</code></p>
+      <p>Finder link, give this to anyone or print the QR:</p>
+      <div class="row">
+        <input type="text" id="finder-link" readonly>
+        <button id="copy" class="secondary">Copy link</button>
+      </div>
+      <div class="qr" id="qr"></div>
+      <p class="status" id="share-status"></p>
+    </section>
+    <section class="card">
+      <h2>Sightings</h2>
+      <p class="lede">Reports from finders show up here once the next commit lands the crypto.</p>
+    </section>
+  </main>
+  <footer><main>Source and the story behind each commit: <a href="https://github.com/songz/beacon">github.com/songz/beacon</a></main></footer>
+  <script src="/vendor/qrcode.js"></script>
+  <script src="/common.js"></script>
+  <script src="/owner.js"></script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>beacon: you found something</title>
+  <title>beacon: lose something, let strangers find it</title>
+  <link rel="stylesheet" href="/app.css">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
+    <meta name="theme-color" content="#0b6e4f" />
+    <meta name="apple-mobile-web-app-title" content="beacon" />
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="top">
+    <h1><a href="/">beacon</a></h1>
+    <span class="replica" id="replica">connecting</span>
+  </header>
+  <main>
+    <section class="card">
+      <h2>You found something</h2>
+      <p class="lede">Item <code id="share-id"></code></p>
+      <p class="status" id="finder-status">checking the share id</p>
+    </section>
+  </main>
+  <footer><main>Source: <a href="https://github.com/songz/beacon">github.com/songz/beacon</a></main></footer>
+  <script src="/common.js"></script>
+  <script src="/finder.js"></script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+{
+  "name": "beacon",
+  "private": true,
+  "description": "Find My at toy scale: Java 21 + Cassandra + ZooKeeper. package.json exists only for the PM2 ecosystem file and the forwarder.",
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}
