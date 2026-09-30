@@ -36,3 +36,7 @@ belong in commits or memory, not here.
 - The three pm2 processes are `beacon.amayz.dev` (forwarder), `beacon-a`, `beacon-b`; the errors module
   keys on those names. myproxy gates a fresh hostname behind the token wall until the mapping has
   `disableAuth: true` (set once for beacon.amayz.dev).
+- Behind myproxy and the forwarder the client address arrives as an IPv4-mapped IPv6 string
+  (`::ffff:127.0.0.1`); `GeoIp.normalize` strips that and the brackets Javalin adds, and every IP
+  reaches the rate limiter and the geo lookup through it. Symptom of a regression: finders "seen in
+  somewhere" and `[GeoIp] no answer for ip=::ffff:...` in the log.

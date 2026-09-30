@@ -131,8 +131,8 @@ final class Api {
 
     static String clientIp(Context ctx) {
         String forwarded = ctx.header("X-Forwarded-For");
-        if (forwarded != null && !forwarded.isBlank()) return forwarded.split(",")[0].trim();
-        return ctx.ip();
+        if (forwarded != null && !forwarded.isBlank()) return GeoIp.normalize(forwarded.split(",")[0]);
+        return GeoIp.normalize(ctx.ip());
     }
 
     static byte[] decode(String b64url, String field) {

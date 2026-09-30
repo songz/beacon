@@ -25,7 +25,7 @@ final class GeoIp {
     private static final int CACHE_LIMIT = 10_000;
 
     static Map<String, Object> lookup(String rawIp) {
-        String ip = rawIp == null ? "" : rawIp.replace("[", "").replace("]", "").trim();
+        String ip = normalize(rawIp);
         String key = isPrivate(ip) ? "" : ip;
         Map<String, Object> hit = CACHE.get(key);
         if (hit != null) return hit;
@@ -59,6 +59,13 @@ final class GeoIp {
         out.put("region", "");
         out.put("country", "");
         return out;
+    }
+
+    /** Strip brackets and the IPv4-mapped IPv6 prefix, so "[::ffff:10.0.0.7]" is judged as "10.0.0.7". */
+    static String normalize(String rawIp) {
+        String ip = rawIp == null ? "" : rawIp.replace("[", "").replace("]", "").trim();
+        if (ip.toLowerCase().startsWith("::ffff:") && ip.indexOf('.') > 0) ip = ip.substring(7);
+        return ip;
     }
 
     static boolean isPrivate(String ip) {
