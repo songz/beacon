@@ -38,7 +38,7 @@ final class Cassandra {
         String host = Main.env("CASSANDRA_HOST", "127.0.0.1");
         int port = Integer.parseInt(Main.env("CASSANDRA_PORT", "9042"));
         CONNECTS.incrementAndGet();
-        System.out.printf("[Cassandra] connecting to %s:%d%n", host, port);
+        Log.out("[Cassandra] connecting to %s:%d", host, port);
         DriverConfigLoader config = DriverConfigLoader.programmaticBuilder()
                 .withDuration(DefaultDriverOption.REQUEST_TIMEOUT, Duration.ofSeconds(10))
                 .withString(DefaultDriverOption.REQUEST_CONSISTENCY, "LOCAL_QUORUM")
@@ -49,8 +49,7 @@ final class Cassandra {
                 .withConfigLoader(config)
                 .build();
         applySchema(bootstrap);
-        bootstrap.execute("USE beacon");
-        System.out.printf("[Cassandra] connected, keyspace=beacon%n");
+        Log.out("[Cassandra] connected, schema applied");
         return bootstrap;
     }
 

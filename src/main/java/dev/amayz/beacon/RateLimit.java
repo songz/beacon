@@ -53,7 +53,7 @@ final class RateLimit {
         long retryAfter = Math.max(byFinder.secondsUntilNextToken(), byIp.secondsUntilNextToken());
         if (retryAfter > 0 || !byFinder.tryAcquire() || !byIp.tryAcquire()) {
             retryAfter = Math.max(1, Math.max(byFinder.secondsUntilNextToken(), byIp.secondsUntilNextToken()));
-            System.out.printf("[RateLimit] 429 finder=%s ip=%s retryAfter=%ds finderTokens=%.1f ipTokens=%.1f%n",
+            Log.out("[RateLimit] 429 finder=%s ip=%s retryAfter=%ds finderTokens=%.1f ipTokens=%.1f",
                     finder.substring(0, 8), ip, retryAfter, byFinder.tokens(), byIp.tokens());
             ctx.status(429).header("Retry-After", Long.toString(retryAfter))
                .json(Map.of("error", "rate limited", "retryAfterSeconds", retryAfter));

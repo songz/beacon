@@ -26,3 +26,13 @@ belong in commits or memory, not here.
 
 - The shell exports `NODE_ENV=production`; irrelevant for Gradle but `run.sh` loads `.env` with
   `set -a` so PORT and REPLICA_* come from the file, never from the caller's environment.
+- Never run a JVM straight off `build/libs/*.jar`: a rebuild overwrites the file under the running
+  process and its next lazy class load throws `NoClassDefFoundError` (seen in the shutdown hook as
+  `LeaderLatch$8`). `run.sh` copies the jar to `build/run/beacon-<replica>.jar` first for that reason.
+- `System.out.printf` writes its pieces as separate writes and pm2 timestamps each one, so a formatted
+  line lands as two log lines. Log through `Log.out` (format, then one println).
+- The Cassandra driver warns "keyspace change at runtime" on a `USE`; every CQL statement names
+  `beacon.<table>` instead and the session is built without a keyspace.
+- The three pm2 processes are `beacon.amayz.dev` (forwarder), `beacon-a`, `beacon-b`; the errors module
+  keys on those names. myproxy gates a fresh hostname behind the token wall until the mapping has
+  `disableAuth: true` (set once for beacon.amayz.dev).

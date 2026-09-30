@@ -32,10 +32,10 @@ final class CassandraStore implements Store {
 
     CassandraStore() {
         CqlSession s = Cassandra.session();
-        insertKey = s.prepare("INSERT INTO schedules (share_id, epoch, public_key) VALUES (?, ?, ?)");
-        selectKey = s.prepare("SELECT public_key FROM schedules WHERE share_id = ? AND epoch = ?");
-        insertReport = s.prepare("INSERT INTO reports (key_hash, ts, ciphertext) VALUES (?, ?, ?)");
-        selectReports = s.prepare("SELECT ts, ciphertext FROM reports WHERE key_hash = ? LIMIT " + REPORTS_PER_HASH);
+        insertKey = s.prepare("INSERT INTO beacon.schedules (share_id, epoch, public_key) VALUES (?, ?, ?)");
+        selectKey = s.prepare("SELECT public_key FROM beacon.schedules WHERE share_id = ? AND epoch = ?");
+        insertReport = s.prepare("INSERT INTO beacon.reports (key_hash, ts, ciphertext) VALUES (?, ?, ?)");
+        selectReports = s.prepare("SELECT ts, ciphertext FROM beacon.reports WHERE key_hash = ? LIMIT " + REPORTS_PER_HASH);
     }
 
     @Override

@@ -107,6 +107,17 @@ async function main() {
 
   showReplica();
   setInterval(showReplica, 5000);
+  showStats();
+  setInterval(showStats, 10000);
+}
+
+async function showStats() {
+  const r = await api('GET', '/api/stats');
+  if (!r.ok) return;
+  const rows = (r.json.rows || []).sort((a, b) => b.epoch - a.epoch);
+  $('stats').innerHTML = rows.length
+    ? rows.map(s => `<li>epoch ${s.epoch}: <strong>${s.reports}</strong> report${s.reports === 1 ? '' : 's'} <span class="status">counted by replica ${s.sweptBy} at ${new Date(s.sweptAt).toLocaleTimeString()}</span></li>`).join('')
+    : `<li class="status">no sweep yet (leader is ${r.json.leader}; the sweep runs every 30 s and counts only epochs with reports)</li>`;
 }
 
 main().catch(e => setStatus('share-status', `this browser could not run the crypto: ${e}`, true));

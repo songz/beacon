@@ -22,3 +22,12 @@ CREATE TABLE IF NOT EXISTS beacon.schedules (
   public_key blob,
   PRIMARY KEY (share_id, epoch)
 ) WITH default_time_to_live = 172800;
+
+-- Written by the elected sweeper every 30 seconds: how many reports landed in each 15-minute epoch, and
+-- which replica counted them. One row per epoch; the sweep overwrites it.
+CREATE TABLE IF NOT EXISTS beacon.stats (
+  epoch     bigint PRIMARY KEY,
+  reports   int,
+  swept_at  timestamp,
+  swept_by  text
+) WITH default_time_to_live = 604800;

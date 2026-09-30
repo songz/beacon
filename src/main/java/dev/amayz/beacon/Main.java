@@ -10,7 +10,8 @@ import java.util.Map;
 /** Entry point: HTTP server, static pages, and the API routes. Business logic lives in the other classes. */
 public final class Main {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
+        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "warn"); // our [Tag] lines are the log
         int port = Integer.parseInt(env("PORT", "8080"));
         String replica = env("REPLICA_ID", "A");
 
@@ -33,6 +34,9 @@ public final class Main {
                 "replica", replica,
                 "epoch", Epochs.current(),
                 "cassandraSessions", Cassandra.CONNECTS.get(),
+                "leader", Leader.current(),
+                "isLeader", Leader.isLeader(),
+                "zookeeper", Zk.client().getZookeeperClient().isConnected() ? "connected" : "disconnected",
                 "uptimeSeconds", java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime() / 1000
         )));
 
@@ -43,9 +47,22 @@ public final class Main {
         });
 
         Api.routes(app, new CassandraStore());
+        Stats.routes(app);
+
+        Leader.start(replica);
+        Sweeper.start(replica);
 
         app.start("0.0.0.0", port);
-        System.out.printf("[Main] replica=%s listening on :%d%n", replica, port);
+        Log.out("[Main] replica=%s listening on :%d", replica, port);
+
+        // pm2 stop sends SIGINT; run.sh execs the JVM so it lands here. Release the latch first: a graceful
+        // stop hands leadership over in well under a second, a kill -9 waits for the ZooKeeper session timeout.
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            Log.out("[Main] replica=%s shutting down", replica);
+            Leader.stop();
+            Zk.client().close();
+            app.stop();
+        }, "shutdown"));
     }
 
     static String env(String name, String fallback) {

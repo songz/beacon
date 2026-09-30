@@ -38,7 +38,7 @@ async function showReplica() {
   try {
     const r = await api('GET', '/health');
     const served = r.headers.get('X-Beacon-Replica') || r.json?.replica || '?';
-    el.textContent = `served by replica ${served}`;
+    el.textContent = `served by replica ${served} · leader is ${r.json?.leader ?? '?'}`;
   } catch {
     el.textContent = 'server unreachable';
   }

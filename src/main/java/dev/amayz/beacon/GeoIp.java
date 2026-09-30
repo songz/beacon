@@ -51,9 +51,9 @@ final class GeoIp {
                 out.put("lon", node.path("lon").asDouble());
                 return out;
             }
-            System.out.printf("[GeoIp] no answer for ip=%s status=%d body=%s%n", ip, res.statusCode(), node.path("message").asText());
+            Log.out("[GeoIp] no answer for ip=%s status=%d body=%s", ip, res.statusCode(), node.path("message").asText());
         } catch (Exception e) {
-            System.out.printf("[GeoIp] lookup failed ip=%s err=%s%n", ip, e);
+            Log.out("[GeoIp] lookup failed ip=%s err=%s", ip, e);
         }
         out.put("city", "somewhere");
         out.put("region", "");

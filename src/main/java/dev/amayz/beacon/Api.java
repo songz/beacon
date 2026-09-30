@@ -65,7 +65,7 @@ final class Api {
             parsed.add(new Store.PublishedKey(epoch, pub));
         }
         store.putSchedule(shareId, parsed);
-        System.out.printf("[Schedule] share=%s keys=%d epochs=%d..%d%n", shareId, parsed.size(),
+        Log.out("[Schedule] share=%s keys=%d epochs=%d..%d", shareId, parsed.size(),
                 parsed.get(0).epoch(), parsed.get(parsed.size() - 1).epoch());
         ctx.status(201).json(Map.of("shareId", shareId, "stored", parsed.size(), "epoch", now));
     }
@@ -97,7 +97,7 @@ final class Api {
             throw new BadRequestResponse("ciphertext must be " + MIN_CIPHERTEXT + ".." + MAX_CIPHERTEXT + " bytes");
         }
         store.putReport(decode(keyHash, "keyHash"), ciphertext);
-        System.out.printf("[Report] keyHash=%s bytes=%d finder=%s ip=%s%n", keyHash.substring(0, 8), ciphertext.length,
+        Log.out("[Report] keyHash=%s bytes=%d finder=%s ip=%s", keyHash.substring(0, 8), ciphertext.length,
                 RateLimit.finderId(ctx).substring(0, 8), clientIp(ctx));
         ctx.status(201).json(Map.of("stored", true, "bytes", ciphertext.length));
     }
@@ -118,7 +118,7 @@ final class Api {
             out.put(e.getKey(), list);
             total += list.size();
         }
-        System.out.printf("[Fetch] hashes=%d reports=%d%n", hashes.size(), total);
+        Log.out("[Fetch] hashes=%d reports=%d", hashes.size(), total);
         ctx.json(out);
     }
 
