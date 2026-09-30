@@ -21,13 +21,17 @@ final class Cassandra {
     /** How many sessions this process has built. Anything above one is a bug. */
     static final AtomicInteger CONNECTS = new AtomicInteger();
 
-    private static CqlSession session;
+    /**
+     * Initialization-on-demand holder. The JVM initializes a class exactly once, under its own lock, the first
+     * time something touches it. Holder is not touched until session() runs, so the session is lazy, and no
+     * caller after the first ever takes a lock. SingletonTest hits this from 64 threads at once.
+     */
+    private static final class Holder {
+        static final CqlSession INSTANCE = connect();
+    }
 
     static CqlSession session() {
-        if (session == null) {            // check ...
-            session = connect();          // ... then act. Not atomic: two callers can both see null.
-        }
-        return session;
+        return Holder.INSTANCE;
     }
 
     static CqlSession connect() {
