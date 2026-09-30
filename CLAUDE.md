@@ -40,3 +40,7 @@ belong in commits or memory, not here.
   (`::ffff:127.0.0.1`); `GeoIp.normalize` strips that and the brackets Javalin adds, and every IP
   reaches the rate limiter and the geo lookup through it. Symptom of a regression: finders "seen in
   somewhere" and `[GeoIp] no answer for ip=::ffff:...` in the log.
+- Rate-limit buckets are per JVM. The forwarder pins requests that carry the `beacon_finder` cookie to
+  one replica by hashing the cookie; without that pin a burst round-robins and one finder gets 20
+  reports before a 429. Requests without the cookie (the owner page) still alternate, which is what
+  makes the header's "served by" flip. Test the limit through the public URL with a cookie jar.
