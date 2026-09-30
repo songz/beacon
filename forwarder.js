@@ -1,6 +1,9 @@
-// The hostname beacon.amayz.dev maps to one port. This forwarder listens there and round-robins requests
-// across the two Java replicas, skipping one that refuses connections. Forty lines of Node so the leader
-// election has two real processes to elect between; a fleet would use its load balancer instead.
+// The hostname beacon.amayz.dev maps to one port. This forwarder listens there and spreads requests across
+// the two Java replicas, skipping one that refuses connections. A request that carries a finder cookie
+// always lands on the same replica (hash of the cookie), so the per-finder token bucket, which lives in
+// that replica's memory, counts every report from that finder. Everything else round-robins. Fifty lines
+// of Node so the leader election has two real processes to elect between; a fleet's load balancer does
+// the same job with a session-affinity rule.
 require('dotenv').config({ path: require('path').join(__dirname, '.env'), override: true });
 const http = require('http');
 
@@ -10,6 +13,15 @@ const TARGETS = [
   { id: 'B', port: Number(process.env.REPLICA_B_PORT) },
 ];
 let next = 0;
+
+// Sticky by finder cookie, round-robin otherwise.
+function pick(req) {
+  const m = /(?:^|;\s*)beacon_finder=([A-Za-z0-9_-]{22})/.exec(req.headers.cookie || '');
+  if (!m) return TARGETS[next++ % TARGETS.length];
+  let h = 0;
+  for (const c of m[1]) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return TARGETS[h % TARGETS.length];
+}
 
 function forward(req, res, target, attempt) {
   const headers = { ...req.headers };
@@ -32,6 +44,5 @@ function forward(req, res, target, attempt) {
 }
 
 http.createServer((req, res) => {
-  const target = TARGETS[next++ % TARGETS.length];
-  forward(req, res, target, 0);
+  forward(req, res, pick(req), 0);
 }).listen(PORT, '127.0.0.1', () => console.log(`[Forwarder] :${PORT} -> A:${TARGETS[0].port}, B:${TARGETS[1].port}`));

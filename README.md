@@ -78,9 +78,11 @@ to two buckets, the finder's (an HttpOnly cookie minted with the finder page) an
 empty bucket answers `429` with `Retry-After` in whole seconds. Try it: press the report button 11 times
 fast.
 
-Buckets live in the process, so each replica counts on its own and a client can get up to 20 through
-the pair. The fleet version keeps the same bucket math but stores tokens and the refill timestamp in
-Redis (one `EVAL` script per request) or in Cassandra counters, so every replica sees one count.
+Buckets live in the process, so each replica counts on its own. The forwarder pins a finder cookie to one
+replica (a hash of the cookie picks A or B), so one finder's reports all meet the same bucket; a finder
+who drops the cookie is still held by the IP bucket, per replica, so up to 20 through the pair. The
+fleet version keeps the same bucket math but stores tokens and the refill timestamp in Redis (one `EVAL`
+script per request) or in Cassandra counters, so every replica sees one count and no affinity is needed.
 
 ### Cassandra ([commit 3](https://github.com/songz/beacon/commit/2a9e49b))
 
