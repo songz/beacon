@@ -6,6 +6,7 @@ finder who encrypts to today's public key, and a server that only ever stores pu
 Java 21, Cassandra 5 and ZooKeeper, in about 900 lines, so each piece can be read in one sitting.
 
 Live: https://beacon.amayz.dev
+Walkthrough: [docs/explainers/beacon-walkthrough.html](docs/explainers/beacon-walkthrough.html), an interactive step-by-step of the four journeys (a finder's report, the spammy finder's 429, the owner's fetch and decrypt, the leader's sweep and failover) with the code behind every step; open the file in a browser, regenerate with `node docs/explainers/beacon-walkthrough.build.mjs`.
 
 ## What you see (nothing to do, nothing to share)
 
