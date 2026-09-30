@@ -14,6 +14,7 @@ public final class Main {
         System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "warn"); // our [Tag] lines are the log
         int port = Integer.parseInt(env("PORT", "8080"));
         String replica = env("REPLICA_ID", "A");
+        Log.replica = replica;
 
         Javalin app = Javalin.create(config -> {
             config.showJavalinBanner = false;
@@ -34,6 +35,7 @@ public final class Main {
                 "ok", true,
                 "replica", replica,
                 "epoch", Epochs.current(),
+                "epochSeconds", Epochs.SECONDS,
                 "cassandraSessions", Cassandra.CONNECTS.get(),
                 "leader", Leader.current(),
                 "isLeader", Leader.isLeader(),
@@ -41,14 +43,10 @@ public final class Main {
                 "uptimeSeconds", java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime() / 1000
         )));
 
-        // The finder page is one static file behind any share id; the id is read from the URL in the browser.
-        app.get("/f/{shareId}", ctx -> {
-            RateLimit.finderId(ctx); // mint the finder cookie with the page, so the first report already has one
-            ctx.contentType("text/html").result(Static.finderPage());
-        });
-
         Api.routes(app, new CassandraStore());
         Stats.routes(app);
+        LogStream.routes(app);
+        Chaos.routes(app, replica);
 
         Leader.start(replica);
         Sweeper.start(replica);

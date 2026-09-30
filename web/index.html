@@ -1,58 +1,48 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>beacon: lose something, let strangers find it</title>
-  <link rel="stylesheet" href="/app.css">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>beacon: lose something, let strangers find it</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials" />
     <meta name="theme-color" content="#0b6e4f" />
-    <meta name="apple-mobile-web-app-title" content="beacon" />
-    <meta name="mobile-web-app-capable" content="yes" />
-  </head>
+  <link rel="stylesheet" href="/app.css">
+</head>
 <body>
   <header class="top">
-    <h1><a href="/">beacon</a></h1>
+    <h1>beacon <span class="sub">Find My at toy scale. Nothing to do: watch for a minute.</span></h1>
     <span class="replica" id="replica">connecting</span>
   </header>
-  <main>
-    <section class="card">
-      <h2>Your lost item</h2>
-      <p class="lede">This browser holds the item's secret seed. The server only ever sees the share id, one public key per 15 minutes, and ciphertext.</p>
-      <p>Share id: <code id="share-id">minting</code></p>
-      <p>Finder link, give this to anyone or print the QR:</p>
-      <div class="row">
-        <input type="text" id="finder-link" readonly>
-        <button id="copy" class="secondary">Copy link</button>
+  <main class="layout">
+    <section class="stage">
+      <div class="field" id="field" title="click to drop one more item">
+        <div class="server" id="server">🗄️<div class="label">server<br><span class="status" id="server-note">stores key hashes and ciphertext</span></div></div>
       </div>
-      <p class="status" id="copy-status"></p>
-      <div class="qr" id="qr"></div>
-      <p class="status" id="share-status"></p>
+      <p class="legend">
+        🎒🔑🚲 lost items, each with its own seed in this tab · 📱 finders, one of them <span class="spam">spammy</span> · 🏠 the owner, decrypting here ·
+        📍 last seen · keys rotate every <strong id="epoch-len">60</strong> s in this demo, real Find My rotates every 15 min.
+        Click the field to drop one more item.
+      </p>
+      <p class="counts status" id="counts"></p>
     </section>
-    <section class="card">
-      <h2>Sightings</h2>
-      <p class="lede">Finders encrypt their location to this epoch's public key. This tab derives the matching private key from the seed and decrypts. Polls every 5 seconds.</p>
-      <ul class="sightings" id="sightings"></ul>
-      <p class="status" id="poll-status"></p>
-    </section>
-    <section class="card">
-      <h2>Behind the header</h2>
-      <p class="lede">Two Java replicas share this hostname. ZooKeeper elects one to run the 30-second sweep that counts reports per epoch. Stop the leader and the other takes over.</p>
-      <ul class="sightings" id="stats"><li class="status">loading</li></ul>
-    </section>
-    <section class="card">
-      <h2>Reset</h2>
-      <p class="lede">Deletes the seed from this browser. Old ciphertexts on the server become permanently unreadable, which is the point.</p>
-      <button id="forget" class="secondary">Forget this item</button>
-    </section>
+    <aside class="panel">
+      <div class="panel-head">
+        <strong>server log</strong>
+        <button id="kill" class="secondary" title="stops the leader replica; pm2 restarts it in about 15 s and the other replica takes the latch">kill the leader</button>
+      </div>
+      <pre class="log" id="log"></pre>
+      <p class="status">both replicas stream their own lines over SSE; the first letter is the replica.</p>
+    </aside>
   </main>
-  <footer><main>Source and the story behind each commit: <a href="https://github.com/songz/beacon">github.com/songz/beacon</a></main></footer>
-  <script src="/vendor/qrcode.js"></script>
+  <footer><main>
+    Real Find My: P-224 keys over Bluetooth, 15-minute rotation, billions of reports. Here: P-256 in WebCrypto over HTTPS, 60-second rotation, two Java replicas, one Cassandra node.
+    <a href="https://github.com/songz/beacon">README and the commit-by-commit walkthrough</a> · <a href="https://amayz.dev/notes/java-concurrency/">the notes this came from</a>
+  </main></footer>
   <script src="/common.js"></script>
   <script src="/crypto.js"></script>
-  <script src="/owner.js"></script>
+  <script src="/sim.js"></script>
 </body>
 </html>

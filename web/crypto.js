@@ -10,8 +10,8 @@
 // This is the shape of Apple's Find My offline finding: rotating keys derived from one secret, ECDH with an
 // ephemeral key per report, and a server that only ever sees public keys and ciphertext.
 
-const EPOCH_SECONDS = 900;
-const PUBLISHED_AHEAD = 96;
+let EPOCH_SECONDS = 60;        // the server's /health says what it runs; the demo uses 60 s, real Find My 15 min
+const PUBLISHED_AHEAD = 30;    // epochs published in advance per item (30 minutes in the demo)
 
 const P256_ORDER = BigInt('0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551');
 

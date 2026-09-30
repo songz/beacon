@@ -19,10 +19,10 @@ function hex(bytes) {
   return [...new Uint8Array(bytes)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-async function api(method, path, body) {
+async function api(method, path, body, headers = {}) {
   const res = await fetch(path, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers: body ? { 'Content-Type': 'application/json', ...headers } : headers,
     body: body ? JSON.stringify(body) : undefined,
   });
   const text = await res.text();
@@ -31,24 +31,4 @@ async function api(method, path, body) {
   return { ok: res.ok, status: res.status, headers: res.headers, json, text };
 }
 
-// Header line: which replica answered this request. Refreshed every few seconds so a failover is visible.
-async function showReplica() {
-  const el = document.getElementById('replica');
-  if (!el) return;
-  try {
-    const r = await api('GET', '/health');
-    const served = r.headers.get('X-Beacon-Replica') || r.json?.replica || '?';
-    el.textContent = `served by replica ${served} · leader is ${r.json?.leader ?? '?'}`;
-  } catch {
-    el.textContent = 'server unreachable';
-  }
-}
-
 function $(id) { return document.getElementById(id); }
-
-function setStatus(id, text, isError) {
-  const el = $(id);
-  if (!el) return;
-  el.textContent = text;
-  el.classList.toggle('err', !!isError);
-}

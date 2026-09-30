@@ -10,10 +10,6 @@ import java.nio.file.Path;
 final class Static {
     private Static() {}
 
-    static String finderPage() {
-        return read("finder.html");
-    }
-
     static String read(String name) {
         try {
             Path onDisk = Path.of("web", name);

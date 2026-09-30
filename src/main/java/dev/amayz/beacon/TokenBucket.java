@@ -45,6 +45,11 @@ final class TokenBucket {
         return (long) Math.ceil((1 - tokens) / refillPerSecond);
     }
 
+    synchronized boolean isFull() {
+        refill();
+        return tokens >= capacity;
+    }
+
     synchronized double tokens() {
         refill();
         return tokens;

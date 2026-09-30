@@ -14,12 +14,15 @@ const TARGETS = [
 ];
 let next = 0;
 
-// Sticky by finder cookie, round-robin otherwise.
+// ?replica=A|B pins a request (the page opens one log stream per replica and kills the leader by id).
+// A finder id (header, else cookie) pins by hash so its token bucket sees every report. Else round-robin.
 function pick(req) {
-  const m = /(?:^|;\s*)beacon_finder=([A-Za-z0-9_-]{22})/.exec(req.headers.cookie || '');
-  if (!m) return TARGETS[next++ % TARGETS.length];
+  const q = /[?&]replica=([AB])\b/.exec(req.url || '');
+  if (q) return TARGETS.find(t => t.id === q[1]);
+  const finder = req.headers['x-beacon-finder'] || (/(?:^|;\s*)beacon_finder=([A-Za-z0-9_-]{22})/.exec(req.headers.cookie || '') || [])[1];
+  if (!finder) return TARGETS[next++ % TARGETS.length];
   let h = 0;
-  for (const c of m[1]) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  for (const c of finder) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   return TARGETS[h % TARGETS.length];
 }
 
@@ -32,7 +35,8 @@ function forward(req, res, target, attempt) {
   });
   upstream.on('error', err => {
     const other = TARGETS[(TARGETS.indexOf(target) + 1) % TARGETS.length];
-    if (attempt === 0 && (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET')) {
+    const pinned = /[?&]replica=[AB]\b/.test(req.url || '');
+    if (attempt === 0 && !pinned && (err.code === 'ECONNREFUSED' || err.code === 'ECONNRESET')) {
       console.log(`[Forwarder] replica ${target.id} ${err.code}, retrying on ${other.id}`);
       return forward(req, res, other, 1);
     }
