@@ -7,29 +7,42 @@ Java 21, Cassandra 5 and ZooKeeper, in about 900 lines, so each piece can be rea
 
 Live: https://beacon.amayz.dev
 
-## Try it in 30 seconds
+## What you see (nothing to do, nothing to share)
 
-1. Open https://beacon.amayz.dev. Your browser mints a secret seed, keeps it in localStorage, and shows a
-   finder link and a QR code. The header says which of the two replicas answered and which one is leader.
-2. Open the finder link in another tab, or scan the QR with your phone. Press **Report a sighting**. The
-   page encrypts your coarse location in the tab and posts the ciphertext. It shows you the bytes it sent.
-3. Back on the first tab, the sighting appears within 5 seconds, decrypted in the browser: "seen in
-   San Jose, California, 12 s ago".
+Open https://beacon.amayz.dev and watch for a minute. Everything runs in your tab against the real backend.
 
-The finder page also works with cookies and geolocation denied: the server offers its own IP lookup of
-the caller as the coarse location.
+1. The tab mints three lost items (🎒 🔑 🚲), each with its own random seed kept in this tab, and publishes
+   one public key per epoch for each of them. Every item shows the short hash of its current key and a
+   countdown; keys rotate every **60 seconds** in the demo (real Find My: 15 minutes, the page says so),
+   so you see the hash change while watching.
+2. Six finders (📱) wander. When one passes an item it encrypts the item's position in the browser
+   (ECDH P-256 with an ephemeral key, HKDF-SHA256, AES-256-GCM) and posts the ciphertext. A small packet
+   flies to the server box showing the first bytes of the ciphertext, never the coordinates, and comes back
+   marked `201 stored`.
+3. The owner (🏠) fetches by key hash every 3 seconds, decrypts in the tab, and drops a 📍 "seen 4s ago by
+   finder 2" marker on the item.
+4. One finder is spammy: 20 reports a second. The token bucket lets 10 through and then answers 429; its
+   packets bounce red while the other five keep flowing.
+5. The right-hand panel streams both replicas' logs over server-sent events, the replica id first on every
+   line. The header says `served by A · leader B`. Press **kill the leader**: the leader replica exits, the
+   panel shows the other one acquire the latch within a second, and pm2 brings the dead one back in about
+   15 seconds as a follower. One kill per 30 seconds, across all visitors.
+6. Click the field to drop one more item.
+
+Every visitor shares one backend, so the sweeper's counts include everyone; items are private to the tab
+that minted them because only that tab holds the seed.
 
 ## What is real Find My and what is toy
 
 | Real Find My | Here |
 | --- | --- |
-| AirTag broadcasts a rotating P-224 public key over Bluetooth every 15 minutes | The owner publishes one P-256 public key per 15-minute epoch to the server, 96 epochs ahead |
-| Nearby iPhones pick up the key, encrypt their location to it, upload to Apple | Anyone with the finder link fetches today's key and encrypts in the browser |
+| AirTag broadcasts a rotating P-224 public key over Bluetooth every 15 minutes | The tab publishes one P-256 public key per 60-second epoch to the server, 30 epochs ahead |
+| Nearby iPhones pick up the key, encrypt their location to it, upload to Apple | Simulated finders in the same tab fetch the epoch key and encrypt in the browser |
 | Keys are derived from a master beacon key with a KDF and a counter | HKDF-SHA256(seed, epoch) becomes the private scalar; the seed never leaves the browser |
 | Apple indexes reports by SHA-256 of the public key; the owner queries hashes | Same: reports are keyed by SHA-256(public key), the owner fetches up to 97 hashes |
 | ECIES with the advertised key: ECDH, KDF, AES-GCM | ECDH P-256 with an ephemeral key, HKDF-SHA256, AES-256-GCM |
 | Millions of finders, billions of reports, rate limits everywhere | Two JVM replicas, one Cassandra node, a token bucket per finder |
-| The owner's devices share the seed through iCloud Keychain | One browser holds the seed; "Forget this item" deletes it |
+| The owner's devices share the seed through iCloud Keychain | The tab that minted the item holds the seed; close it and the item is gone |
 
 The key schedule is deliberately simple: one HKDF call per epoch, no hierarchical derivation, no
 secondary keys. The real protocol adds those for efficiency on a coin cell battery, not for security.
@@ -74,13 +87,15 @@ Nothing blocks on the HTTP thread that is not a parked virtual thread.
 
 `TokenBucket`: capacity 10, refill 1 per second, refilled lazily inside one `synchronized tryAcquire`,
 so there is no timer per bucket and the critical section is a few arithmetic ops. Each report is charged
-to two buckets, the finder's (an HttpOnly cookie minted with the finder page) and the caller IP's. An
-empty bucket answers `429` with `Retry-After` in whole seconds. Try it: press the report button 11 times
-fast.
+to two buckets: the finder's (the `X-Beacon-Finder` header the page sends per sprite, or a cookie the
+server mints when there is none) and the caller IP's, which is a wide backstop (100, refill 20 per
+second) so one spammy finder cannot starve the five next to it in the same browser. An empty bucket
+answers `429` with `Retry-After` in whole seconds. The spammy finder on the page is this in motion, and
+the log coalesces its rejections to one line per second with a count.
 
-Buckets live in the process, so each replica counts on its own. The forwarder pins a finder cookie to one
-replica (a hash of the cookie picks A or B), so one finder's reports all meet the same bucket; a finder
-who drops the cookie is still held by the IP bucket, per replica, so up to 20 through the pair. The
+Buckets live in the process, so each replica counts on its own. The forwarder pins a finder id to one
+replica (a hash of the id picks A or B), so one finder's reports all meet the same bucket; a finder
+without an id is still held by the IP bucket, per replica. The
 fleet version keeps the same bucket math but stores tokens and the refill timestamp in Redis (one `EVAL`
 script per request) or in Cassandra counters, so every replica sees one count and no affinity is needed.
 
@@ -118,7 +133,10 @@ Two replicas run behind one hostname. Each joins a Curator `LeaderLatch` at `/be
 ephemeral sequential znode per replica, lowest wins. Only the leader runs the 30-second sweep; the
 other logs that it skipped and who the leader is. The page header shows `served by replica A · leader is B`.
 
-Failover test, from the box:
+Failover test, from the page: press **kill the leader**. `POST /api/chaos/kill-leader?replica=<leader>`
+makes the leader exit; the panel shows the other replica's `[Leader] acquired` well under a second later,
+and pm2 restarts the dead JVM (about 15 seconds: JVM boot plus the Cassandra connect) as a follower.
+From the box, the same thing:
 
 ```
 pm2 stop beacon-b            # B was leader
@@ -136,17 +154,18 @@ Everything is in `web/crypto.js`, WebCrypto only, about 90 lines.
 
 - Seed: 32 random bytes in the owner's localStorage. Share id: `HKDF(seed, "beacon-share-id")`.
 - Per epoch: `HKDF(seed, "beacon-epoch-" + epoch)` is the P-256 private scalar. The browser wraps it in a
-  minimal PKCS#8 structure and imports it; WebCrypto computes the public point on import. The owner
-  publishes the public points for the current and next 96 epochs; the server stores them under the share
-  id and hands out the current one to finders.
+  minimal PKCS#8 structure and imports it; WebCrypto computes the public point on import. The tab
+  publishes the public points for the current and next 30 epochs; the server stores them under the share
+  id (48-hour TTL) and hands out the current one to finders.
 - Report: the finder makes an ephemeral P-256 pair, runs ECDH with the epoch key, derives an AES-256-GCM
   key with HKDF, and encrypts the location. The envelope is ephemeral public point (65 bytes), nonce
   (12), ciphertext and tag. The server checks that it is 93 to 2048 bytes and stores it under
   SHA-256(public key).
 - Owner: derives the same epoch private key, ECDH with the ephemeral point in the envelope, decrypts.
 
-Rotation means no stable identifier ties one item's reports together on the server: 97 hashes a day,
-each a fresh partition. The server verifies nothing about content, only sizes and rate.
+Rotation means no stable identifier ties one item's reports together on the server: a fresh hash and a
+fresh partition every epoch (every 60 seconds here, 96 a day in the real protocol). The server verifies
+nothing about content, only sizes and rate.
 
 What changes if the owner shares the item with family: today the epoch private key is the only thing
 that decrypts, and only one browser can derive it. Sharing is envelope encryption: the finder's report
@@ -155,12 +174,12 @@ public key and publishes the wrapped copies. Each family member unwraps their co
 key and then decrypts reports exactly as the owner does. The report format, the server and the finder
 never change; only the key distribution does.
 
-Proof the server cannot read a report, from the box:
+Proof the server cannot read a report, from the box (the plaintext is `{"item":"🎒","x":31.2,"y":44.0,...}`):
 
 ```
 cqlsh> SELECT ciphertext FROM beacon.reports LIMIT 1;
- 0x04704b3ae45873b182db735180b3afcca84105bda28...   (239 bytes, no structure)
-$ grep -c "Santa Clara" ~/Apps/prod-logs/beacon-*.log
+ 0x04fdf952a0d668028c99a2c2270e454c6d36a8ab82...   (169 bytes, no structure)
+$ grep -c '"x":' ~/Apps/prod-logs/beacon-*.log
 0
 ```
 
@@ -168,7 +187,7 @@ $ grep -c "Santa Clara" ~/Apps/prod-logs/beacon-*.log
 
 ```
 docker compose up -d      # cassandra:5 capped at 1G heap, zookeeper:3.9, both on 127.0.0.1 only
-./gradlew run             # one replica on :8080 with PORT unset; REPLICA_ID defaults to A
+./gradlew run             # one replica on :8080 with PORT unset; REPLICA_ID defaults to A, epochs 60 s (EPOCH_SECONDS)
 ./gradlew test            # SingletonTest (64 threads) and TokenBucketTest
 ```
 
@@ -193,10 +212,12 @@ Logs are one line per event with a tag: `[Report]`, `[Fetch]`, `[Schedule]`, `[L
 ## Layout
 
 ```
-web/            index.html (owner), finder.html, crypto.js, owner.js, finder.js, common.js
+web/            index.html, sim.js (items, finders, owner, log panel), crypto.js (the protocol), common.js
 src/main/java/dev/amayz/beacon/
   Main          routes, static files, shutdown hook
   Api           validation and the five JSON endpoints
+  LogStream     /api/log, each replica's log over server-sent events
+  Chaos         /api/chaos/kill-leader, the failover button
   Cassandra     the CqlSession holder singleton and schema apply
   CassandraStore  the three tables, the virtual-thread fan-out
   Zk, Leader    the CuratorFramework holder and the LeaderLatch
@@ -209,4 +230,5 @@ forwarder.js    round-robin over the two replicas on the public port
 ```
 
 Tested in Chrome. The PKCS#8 import that derives the public point from a scalar is standard WebCrypto
-and should work in Firefox and Safari, but only Chrome has been driven end to end.
+and should work in Firefox and Safari, but only Chrome has been driven end to end. The page is one HTML
+file, one stylesheet and three scripts with no build step, so view-source shows the whole client.

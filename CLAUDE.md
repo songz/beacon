@@ -13,8 +13,16 @@ belong in commits or memory, not here.
 
 - Java 21 on purpose (the interview's language), not the house Node default. Build with the
   Gradle wrapper (`./gradlew build`), JDK from `~/.local/jdk/jdk-21*`; no global install.
-- The client is three plain files under `web/` with no build step, so an interviewer can read
-  the crypto in the browser's view-source. Deliberate deviation from the React default.
+- The client is one page plus three plain scripts under `web/` with no build step, so an interviewer
+  can read the crypto in the browser's view-source. Deliberate deviation from the React default.
+- The page is a self-running simulation (owner decision 2026-09-29: no second device, no links to
+  share): items, finders and the owner all live in one tab and talk to the real backend. The
+  finder identity is the `X-Beacon-Finder` header per sprite; the cookie path exists only for
+  clients that send no header. Epoch length is a server setting (`EPOCH_SECONDS`, 60 in the demo)
+  that the page reads from `/health`; the client and server must agree or hashes never match.
+- The log panel is two SSE streams, one per replica, because each JVM only knows its own log; the
+  forwarder honours `?replica=A|B` for that and for the kill button. A pinned request does not fail
+  over, by design.
 - `web/` is served from disk when the process runs in the checkout and from the jar otherwise,
   so a page edit is live without a rebuild in dev but the fat jar still ships everything.
 - The server never sees a seed or a plaintext location. Everything it stores is either a public
@@ -44,3 +52,8 @@ belong in commits or memory, not here.
   one replica by hashing the cookie; without that pin a burst round-robins and one finder gets 20
   reports before a 429. Requests without the cookie (the owner page) still alternate, which is what
   makes the header's "served by" flip. Test the limit through the public URL with a cookie jar.
+- Javalin's SSE handler only engages when the request sends `Accept: text/event-stream`; a bare curl
+  gets an empty 200 and looks like a broken route. `EventSource` sends the header; test with
+  `curl -N -H 'Accept: text/event-stream'`.
+- Chrome logs every 429 fetch as a console error, so the simulation shows hundreds of console errors
+  by design (the spammy finder). Judge the page by `window.beaconStats`, not the console count.
