@@ -145,7 +145,7 @@ async function report(f, item) {
     const envelope = await encryptReport(k.publicKey, plaintext);
     const ct = hex(envelope);
     const p = packet(f, serverPos, `🔒 ${ct.slice(0, 12)}…`, '');
-    const r = await api('POST', '/api/reports', { keyHash: k.keyHash, ciphertext: B64URL.encode(envelope) }, { 'X-Beacon-Finder': f.id });
+    const r = await api('POST', '/api/reports', { keyHash: k.keyHash, ciphertext: B64URL.encode(envelope) }, { 'X-Beacon-Finder': f.id, 'X-Beacon-Finder-Name': `finder ${f.n}${f.spam ? ' spammy' : ''}` });
     if (r.status === 201) stats.reports201++; else if (r.status === 429) stats.reports429++;
     if (p) {
       const verdict = r.status === 201 ? `201 stored ${envelope.length} B` : r.status === 429 ? `429 retry after ${r.headers.get('Retry-After')} s` : `${r.status}`;
@@ -234,7 +234,7 @@ function appendLog(line) {
   const span = document.createElement('span');
   const cls = [line[0] === 'A' ? 'A' : line[0] === 'B' ? 'B' : ''];
   if (line.includes('[RateLimit]')) cls.push('rl');
-  if (line.includes('[Leader]') || line.includes('[Chaos]')) cls.push('ld');
+  if (line.includes('[Leader]') || line.includes('[Chaos]') || line.includes('[Boot]')) cls.push('ld');
   if (line.includes('[Sweep]')) cls.push('sw');
   span.className = cls.join(' ');
   span.textContent = line + '\n';

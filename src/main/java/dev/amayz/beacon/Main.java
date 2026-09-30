@@ -53,6 +53,9 @@ public final class Main {
 
         app.start("0.0.0.0", port);
         Log.out("[Main] replica=%s listening on :%d", replica, port);
+        // The singleton, on record: every route above already touched both holders, and each was built once.
+        Log.out("[Boot] replica %s · CqlSession holder=%d of 1 · Curator holder=%d of 1 · epoch %d s",
+                replica, Cassandra.CONNECTS.get(), Zk.CONNECTS.get(), Epochs.SECONDS);
 
         // pm2 stop sends SIGINT; run.sh execs the JVM so it lands here. Release the latch first: a graceful
         // stop hands leadership over in well under a second, a kill -9 waits for the ZooKeeper session timeout.

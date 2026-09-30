@@ -97,8 +97,8 @@ final class Api {
             throw new BadRequestResponse("ciphertext must be " + MIN_CIPHERTEXT + ".." + MAX_CIPHERTEXT + " bytes");
         }
         store.putReport(decode(keyHash, "keyHash"), ciphertext);
-        Log.out("[Report] keyHash=%s bytes=%d finder=%s ip=%s", keyHash.substring(0, 8), ciphertext.length,
-                RateLimit.finderId(ctx).substring(0, 8), clientIp(ctx));
+        Log.out("[Report] %s · %d B of ciphertext stored under key hash %s… · ip %s",
+                RateLimit.finderName(ctx), ciphertext.length, keyHash.substring(0, 8), clientIp(ctx));
         ctx.status(201).json(Map.of("stored", true, "bytes", ciphertext.length));
     }
 
@@ -119,8 +119,8 @@ final class Api {
             out.put(e.getKey(), list);
             total += list.size();
         }
-        Log.out("[Fetch] hashes=%d reports=%d ms=%d thread=%s", hashes.size(), total,
-                (System.nanoTime() - started) / 1_000_000, Thread.currentThread().isVirtual() ? "virtual" : "platform");
+        Log.out("[Fetch] %d key hashes in %d ms on %s threads · %d reports found", hashes.size(),
+                (System.nanoTime() - started) / 1_000_000, Thread.currentThread().isVirtual() ? "virtual" : "platform", total);
         ctx.json(out);
     }
 

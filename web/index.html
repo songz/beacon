@@ -38,7 +38,8 @@
     </aside>
   </main>
   <footer><main>
-    Real Find My: P-224 keys over Bluetooth, 15-minute rotation, billions of reports. Here: P-256 in WebCrypto over HTTPS, 60-second rotation, two Java replicas, one Cassandra node.
+    Real Find My: P-224 keys over Bluetooth, 15-minute rotation, billions of reports, a Cassandra cluster at RF=3 with LOCAL_QUORUM (2 of 3 replicas per read and write).
+    Here: P-256 in WebCrypto over HTTPS, 60-second rotation, two Java replicas, one Cassandra node at RF=1, no Kafka (reports go straight to Cassandra).
     <a href="https://github.com/songz/beacon">README and the commit-by-commit walkthrough</a> · <a href="https://amayz.dev/notes/java-concurrency/">the notes this came from</a>
   </main></footer>
   <script src="/common.js"></script>

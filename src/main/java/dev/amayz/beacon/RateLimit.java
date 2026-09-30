@@ -25,6 +25,8 @@ final class RateLimit {
     static final double IP_REFILL_PER_SECOND = 20.0;
     static final String COOKIE = "beacon_finder";
     static final String HEADER = "X-Beacon-Finder";
+    /** Optional display name the page sends per sprite ("finder 5"), for the log only. */
+    static final String NAME_HEADER = "X-Beacon-Finder-Name";
     private static final int MAX_BUCKETS = 50_000;
 
     private static final Map<String, TokenBucket> BUCKETS = new ConcurrentHashMap<>();
@@ -49,6 +51,14 @@ final class RateLimit {
         return id;
     }
 
+    /** "finder 5 (uVWWk-Lp)" when the page named the sprite, else the short id. Never trusted for anything but the log. */
+    static String finderName(Context ctx) {
+        String id = finderId(ctx).substring(0, 8);
+        String name = ctx.header(NAME_HEADER);
+        if (name != null && name.matches("^[A-Za-z0-9 _-]{1,24}$")) return name + " (" + id + ")";
+        return "finder " + id;
+    }
+
     /** Runs before POST /api/reports. Ends the request with 429 and Retry-After when either bucket is empty. */
     static void check(Context ctx) {
         String finder = finderId(ctx);
@@ -59,7 +69,7 @@ final class RateLimit {
         long retryAfter = Math.max(byFinder.secondsUntilNextToken(), byIp.secondsUntilNextToken());
         if (retryAfter > 0 || !byFinder.tryAcquire() || !byIp.tryAcquire()) {
             retryAfter = Math.max(1, Math.max(byFinder.secondsUntilNextToken(), byIp.secondsUntilNextToken()));
-            logRejection(finder, ip, retryAfter, byFinder, byIp);
+            logRejection(finder, finderName(ctx), ip, retryAfter, byFinder, byIp);
             ctx.status(429).header("Retry-After", Long.toString(retryAfter))
                .json(Map.of("error", "rate limited", "retryAfterSeconds", retryAfter));
             ctx.skipRemainingHandlers();
@@ -69,7 +79,7 @@ final class RateLimit {
     /** A spammy finder is rejected 20 times a second; log once a second per finder with the count, so the log stays readable. */
     private static final Map<String, long[]> REJECTIONS = new ConcurrentHashMap<>(); // finder -> {secondLogged, suppressed}
 
-    private static void logRejection(String finder, String ip, long retryAfter, TokenBucket byFinder, TokenBucket byIp) {
+    private static void logRejection(String finder, String name, String ip, long retryAfter, TokenBucket byFinder, TokenBucket byIp) {
         long second = System.currentTimeMillis() / 1000;
         long[] state = REJECTIONS.computeIfAbsent(finder, k -> new long[]{0, 0});
         synchronized (state) {
@@ -77,9 +87,9 @@ final class RateLimit {
             long suppressed = state[1];
             state[0] = second;
             state[1] = 0;
-            Log.out("[RateLimit] 429 finder=%s ip=%s retryAfter=%ds finderTokens=%.1f ipTokens=%.1f%s",
-                    finder.substring(0, 8), ip, retryAfter, byFinder.tokens(), byIp.tokens(),
-                    suppressed > 0 ? " (+" + suppressed + " more 429s in the last second)" : "");
+            Log.out("[RateLimit] %s throttled · %.1f/%d tokens, ip %.0f/%d · 429 retry in %d s%s",
+                    name, byFinder.tokens(), CAPACITY, byIp.tokens(), IP_CAPACITY, retryAfter,
+                    suppressed > 0 ? " (+" + suppressed + " more 429s this second)" : "");
         }
         if (REJECTIONS.size() > MAX_BUCKETS) REJECTIONS.clear();
     }

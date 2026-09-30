@@ -64,8 +64,9 @@ static CqlSession session() { return Holder.INSTANCE; }
 ```
 
 The JVM initializes a class exactly once, under the class-init lock, the first time it is touched, so
-this is lazy, thread-safe, and lock-free after the first call. `SingletonTest` is the interview
-question run against production code: 64 threads parked on a `CountDownLatch`, released together, and
+this is lazy, thread-safe, and lock-free after the first call. Each replica logs the count on boot,
+and the log panel shows it: `[Boot] replica A · CqlSession holder=1 of 1 · Curator holder=1 of 1`.
+`SingletonTest` is the interview question run against production code: 64 threads parked on a `CountDownLatch`, released together, and
 the distinct instances counted. The bare null check from [commit 3](https://github.com/songz/beacon/commit/2a9e49b)
 is kept as a disabled test; its message records the measured result, 64, 64 and 63 distinct instances
 out of 64 threads in three runs.
@@ -78,7 +79,8 @@ Three kinds of thread, each chosen for its job:
   parks the request instead of pinning a pool thread.
 - The owner's fetch of up to 97 key hashes fans out on a `newVirtualThreadPerTaskExecutor` with
   `invokeAll`, which keeps order and rethrows the first failure. Sequential it took 160 to 290 ms on
-  the box; fanned out it takes 24 to 32 ms.
+  the box; fanned out it takes 24 to 32 ms. Every fetch logs its own measurement:
+  `[Fetch] 15 key hashes in 8 ms on virtual threads · 20 reports found`.
 - The sweeper is a single-thread `ScheduledExecutorService`: one job every 30 seconds, one daemon thread.
 
 Nothing blocks on the HTTP thread that is not a parked virtual thread.
@@ -91,7 +93,8 @@ to two buckets: the finder's (the `X-Beacon-Finder` header the page sends per sp
 server mints when there is none) and the caller IP's, which is a wide backstop (100, refill 20 per
 second) so one spammy finder cannot starve the five next to it in the same browser. An empty bucket
 answers `429` with `Retry-After` in whole seconds. The spammy finder on the page is this in motion, and
-the log coalesces its rejections to one line per second with a count.
+the log shows the bucket state, one line per second with a count:
+`[RateLimit] finder 5 spammy (uVWWk-Lp) throttled · 0.5/10 tokens, ip 100/100 · 429 retry in 1 s (+17 more 429s this second)`.
 
 Buckets live in the process, so each replica counts on its own. The forwarder pins a finder id to one
 replica (a hash of the id picks A or B), so one finder's reports all meet the same bucket; a finder
@@ -119,6 +122,9 @@ stats     (epoch bigint PRIMARY KEY, reports int, swept_at timestamp, swept_by t
   job; the owner republishes while the page is open.
 - Writes are cheap because Cassandra appends to a commit log and a memtable and never reads before
   writing. The 97-key publish is one unlogged batch since every row lands in the same partition.
+- Every `[Report]` log line names the key hash the row landed under
+  (`[Report] finder 3 (nxlIEgzZ) · 169 B of ciphertext stored under key hash yfjwAmFx… · ip 127.0.0.1`), so
+  after a rotation you can watch new reports start under a new hash while the owner keeps finding both.
 - Consistency is `LOCAL_QUORUM` for reads and writes. On the single dev node that is one
   acknowledgement. At RF=3 the same code needs 2 of 3 replicas on both sides, so a read always overlaps
   a write's replicas and sees it. Nothing else changes: the keyspace gets
@@ -126,6 +132,10 @@ stats     (epoch bigint PRIMARY KEY, reports int, swept_at timestamp, swept_by t
 
 The sweeper's full scan of `reports` is the one query that would not survive real volume. In a fleet
 the count moves to write time, a Cassandra counter incremented per report, and the sweeper only reads.
+
+Kafka was left out on purpose. A real ingest path puts reports on a topic and lets consumers write
+Cassandra at their own pace, absorb bursts and replay; here a report goes straight from the HTTP
+handler to Cassandra so the whole thing stays one page of Java and one compose file.
 
 ### ZooKeeper ([commit 6](https://github.com/songz/beacon/commit/125ed16))
 
