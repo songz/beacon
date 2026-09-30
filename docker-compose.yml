@@ -1,0 +1,36 @@
+# Local dependencies for beacon. Both ports bind to 127.0.0.1 only; nothing here is reachable
+# from outside the box. Cassandra is capped at 1G heap so it fits next to the rest of the box.
+services:
+  cassandra:
+    image: cassandra:5
+    container_name: beacon-cassandra
+    ports:
+      - "127.0.0.1:9042:9042"
+    environment:
+      CASSANDRA_CLUSTER_NAME: beacon
+      MAX_HEAP_SIZE: 1G
+      HEAP_NEWSIZE: 200M
+    volumes:
+      - cassandra-data:/var/lib/cassandra
+    healthcheck:
+      test: ["CMD-SHELL", "cqlsh -e 'describe cluster' >/dev/null 2>&1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+    restart: unless-stopped
+
+  zookeeper:
+    image: zookeeper:3.9
+    container_name: beacon-zookeeper
+    ports:
+      - "127.0.0.1:2181:2181"
+    environment:
+      JVMFLAGS: "-Xmx256m"
+      ZOO_4LW_COMMANDS_WHITELIST: "ruok,stat,srvr"
+    volumes:
+      - zookeeper-data:/data
+    restart: unless-stopped
+
+volumes:
+  cassandra-data:
+  zookeeper-data:

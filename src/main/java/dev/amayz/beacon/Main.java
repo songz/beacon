@@ -32,13 +32,14 @@ public final class Main {
                 "ok", true,
                 "replica", replica,
                 "epoch", Epochs.current(),
+                "cassandraSessions", Cassandra.CONNECTS.get(),
                 "uptimeSeconds", java.lang.management.ManagementFactory.getRuntimeMXBean().getUptime() / 1000
         )));
 
         // The finder page is one static file behind any share id; the id is read from the URL in the browser.
         app.get("/f/{shareId}", ctx -> ctx.contentType("text/html").result(Static.finderPage()));
 
-        Api.routes(app, new MemoryStore());
+        Api.routes(app, new CassandraStore());
 
         app.start("0.0.0.0", port);
         System.out.printf("[Main] replica=%s listening on :%d%n", replica, port);

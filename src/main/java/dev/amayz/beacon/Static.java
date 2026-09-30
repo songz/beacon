@@ -18,12 +18,18 @@ final class Static {
         try {
             Path onDisk = Path.of("web", name);
             if (Files.isRegularFile(onDisk)) return Files.readString(onDisk);
-            try (InputStream in = Static.class.getResourceAsStream("/web/" + name)) {
-                if (in == null) throw new IllegalStateException("missing web/" + name);
-                return new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            }
         } catch (IOException e) {
             throw new IllegalStateException("cannot read web/" + name, e);
+        }
+        return readResource("/web/" + name);
+    }
+
+    static String readResource(String path) {
+        try (InputStream in = Static.class.getResourceAsStream(path)) {
+            if (in == null) throw new IllegalStateException("missing resource " + path);
+            return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new IllegalStateException("cannot read resource " + path, e);
         }
     }
 }
