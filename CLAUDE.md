@@ -27,6 +27,11 @@ belong in commits or memory, not here.
   so a page edit is live without a rebuild in dev but the fat jar still ships everything.
 - The server never sees a seed or a plaintext location. Everything it stores is either a public
   key or a ciphertext; the README's "what is real Find My and what is toy" table is the contract.
+- `docs/explainers/beacon-walkthrough.html` is generated: edit `beacon-walkthrough.build.mjs`, run it, then the
+  sequence-explainer generator with `--source-root .`. The build finds every excerpt by anchor string, and the
+  generator hashes every cited file (README.md included), so any edit to a cited file means a rebuild or the
+  check fails. The simulated finder never calls `GET /api/schedules/:id/current`; it reads the key off the item
+  object it shares the tab with, which the explainer says plainly.
 - The git history is the walkthrough: one commit per concept, in the README's order. Keep new
   work in the same spirit (one readable commit, message a reader can follow).
 
