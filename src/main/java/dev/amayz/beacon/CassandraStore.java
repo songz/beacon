@@ -15,6 +15,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 /**
  * Cassandra-backed store. Every query hits exactly one partition, which is what makes Cassandra cheap:
@@ -61,12 +65,28 @@ final class CassandraStore implements Store {
         Cassandra.session().execute(insertReport.bind(ByteBuffer.wrap(keyHash), Uuids.timeBased(), ByteBuffer.wrap(ciphertext)));
     }
 
+    /**
+     * One partition read per hash, all in flight at once. Virtual threads make blocking driver calls cheap
+     * to park: 97 tasks, 97 virtual threads, a handful of carrier threads. invokeAll keeps the answer order
+     * and rethrows the first failure. The executor is per call and closed by try-with-resources, so nothing
+     * leaks across requests.
+     */
     @Override
     public Map<String, List<Report>> reports(List<String> keyHashes) {
+        List<Callable<List<Report>>> tasks = new ArrayList<>();
+        for (String h : keyHashes) tasks.add(() -> reportsFor(h));
         Map<String, List<Report>> out = new LinkedHashMap<>();
-        for (String h : keyHashes) {
-            List<Report> list = reportsFor(h);
-            if (!list.isEmpty()) out.put(h, list);
+        try (ExecutorService fanOut = Executors.newVirtualThreadPerTaskExecutor()) {
+            List<Future<List<Report>>> results = fanOut.invokeAll(tasks);
+            for (int i = 0; i < keyHashes.size(); i++) {
+                List<Report> list = results.get(i).get();
+                if (!list.isEmpty()) out.put(keyHashes.get(i), list);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IllegalStateException("fetch interrupted", e);
+        } catch (java.util.concurrent.ExecutionException e) {
+            throw new IllegalStateException("fetch failed: " + e.getCause(), e.getCause());
         }
         return out;
     }

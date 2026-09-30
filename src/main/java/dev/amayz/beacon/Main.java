@@ -17,6 +17,7 @@ public final class Main {
 
         Javalin app = Javalin.create(config -> {
             config.showJavalinBanner = false;
+            config.useVirtualThreads = true; // Jetty handles each request on a virtual thread: a blocked fetch parks, it does not pin a pool thread
             config.http.defaultContentType = "application/json";
             // Serve web/ from disk when running from the checkout, from the jar otherwise.
             if (Files.isDirectory(Path.of("web"))) {

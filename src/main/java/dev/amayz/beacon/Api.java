@@ -109,6 +109,7 @@ final class Api {
             throw new BadRequestResponse("pass 1.." + MAX_HASHES_PER_FETCH + " h= parameters");
         }
         for (String h : hashes) if (!KEY_HASH.matcher(h).matches()) throw new BadRequestResponse("bad key hash " + h);
+        long started = System.nanoTime();
         Map<String, List<Store.Report>> found = store.reports(hashes);
         Map<String, List<Map<String, String>>> out = new HashMap<>();
         int total = 0;
@@ -118,7 +119,8 @@ final class Api {
             out.put(e.getKey(), list);
             total += list.size();
         }
-        Log.out("[Fetch] hashes=%d reports=%d", hashes.size(), total);
+        Log.out("[Fetch] hashes=%d reports=%d ms=%d thread=%s", hashes.size(), total,
+                (System.nanoTime() - started) / 1_000_000, Thread.currentThread().isVirtual() ? "virtual" : "platform");
         ctx.json(out);
     }
 
