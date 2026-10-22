@@ -9,7 +9,7 @@ REPLICA="${1:-A}"
 PORT_VAR="REPLICA_${REPLICA}_PORT"
 export REPLICA_ID="$REPLICA"
 export PORT="${!PORT_VAR:-$PORT}"
-JAVA="${JAVA_HOME:-$HOME/.local/jdk/jdk-21.0.12.1+1}/bin/java"
+JAVA="${JAVA_HOME:-$HOME/.local/jdk/current}/bin/java"
 # Run a private copy of the jar. A JVM loads classes lazily from the open jar file, so a rebuild that
 # overwrites build/libs/*.jar under a running replica makes its next class load fail (NoClassDefFoundError
 # in the shutdown hook was how this surfaced). The copy makes rebuilds safe while replicas run.
