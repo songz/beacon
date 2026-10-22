@@ -1,0 +1,12 @@
+# 2026-10-22 eMudhra CA compromise: the zookeeper:3.9 / cassandra:5 images ship JDK 17.0.20.1,
+# whose cacerts still trusts "emSign ECC Root CA - G3" (plus G1/C1/C3), and an OS bundle with G3.
+# Mount the host's clean stores read-only: the patched OS bundle, and the cacerts of the host
+# JDK 21.0.13 (PKCS12, readable by 17). Delete once the upstream images ship a fixed JDK.
+x-trust: &trust
+  - /etc/ssl/certs/ca-certificates.crt:/etc/ssl/certs/ca-certificates.crt:ro
+  - /home/amayz/.local/jdk/current/lib/security/cacerts:/opt/java/openjdk/lib/security/cacerts:ro
+services:
+  zookeeper:
+    volumes: *trust
+  cassandra:
+    volumes: *trust
